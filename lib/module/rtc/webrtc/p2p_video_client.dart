@@ -1,4 +1,4 @@
-import 'package:mvvm/module/rtc/p2p_socket.dart';
+import 'p2p_socket.dart';
 
 /// 视频呼叫
 class P2PVideoClient {

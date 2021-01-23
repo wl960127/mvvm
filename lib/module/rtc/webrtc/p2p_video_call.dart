@@ -1,11 +1,11 @@
 import 'dart:convert';
 
 import 'package:flutter_webrtc/flutter_webrtc.dart';
-import 'package:mvvm/module/rtc/p2p_ice_server.dart';
-import 'package:mvvm/module/rtc/p2p_socket.dart';
+import 'package:mvvm/module/rtc/basertc/p2p_state.dart';
 
-import 'p2p_constraints.dart';
-import 'p2p_state.dart';
+import '../webrtc/p2p_constraints.dart';
+import 'p2p_ice_server.dart';
+import 'p2p_socket.dart';
 
 /// 定义信令状态回调
 typedef void SignalingStateCallback(P2PState state);

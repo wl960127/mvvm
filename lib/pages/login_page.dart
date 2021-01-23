@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mvvm/di/net/result_code.dart';
 import 'package:mvvm/routers/application.dart';
+import 'package:mvvm/routers/routers.dart';
 import 'package:mvvm/viewmodel/login_provider.dart';
 import 'package:mvvm/widgets/toast.dart';
 
@@ -106,7 +107,7 @@ class __LoginContentPageState extends State<_LoginContentPage>
                       '登录',
                     ),
                     onPressed: () {
-                      Application.router.navigateTo(context, '/video');
+                      Application.router.navigateTo(context, Routers.main);
 
                       // onClick('login');
                     },

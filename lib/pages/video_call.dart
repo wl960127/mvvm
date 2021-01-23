@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/src/widgets/framework.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
-import 'package:mvvm/module/rtc/p2p_state.dart';
-import 'package:mvvm/module/rtc/p2p_video_call.dart';
+import 'package:mvvm/module/rtc/basertc/p2p_state.dart';
+import 'package:mvvm/module/rtc/webrtc/p2p_video_call.dart';
 import 'package:mvvm/pages/common/base.dart';
 import 'package:mvvm/util/util.dart';
 import 'package:mvvm/viewmodel/video_provider.dart';
@@ -29,7 +29,7 @@ class _VideoCallPage extends StatefulWidget {
 }
 
 class _VideoCallPageState extends State<_VideoCallPage>
-    with TickerProviderStateMixin<_VideoCallPage>
+    with TickerProviderStateMixin<_VideoCallPage>, AutomaticKeepAliveClientMixin
     implements Presenter {
   VideoCallProvider _provider;
 
@@ -81,11 +81,9 @@ class _VideoCallPageState extends State<_VideoCallPage>
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return Material(
       child: Scaffold(
-        appBar: AppBar(
-          title: Text("rtc"),
-        ),
         body: _inCalling
             ? OrientationBuilder(
                 builder: (context, orientation) {
@@ -242,4 +240,7 @@ class _VideoCallPageState extends State<_VideoCallPage>
       Divider()
     ]);
   }
+
+  @override
+  bool get wantKeepAlive => true;
 }

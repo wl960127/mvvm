@@ -40,7 +40,6 @@ class BaseProvide with ChangeNotifier {
 /// page的基类 [PageProvideNode]
 ///
 /// 隐藏了 [Provider] 的调用
-
 abstract class PageProvideNode<T extends ChangeNotifier> extends StatelessWidget
     implements Presenter {
   ///
