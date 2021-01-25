@@ -29,7 +29,7 @@ class _MainContentState extends State<_MainContentPage>
   static const TextStyle optionStyle =
       TextStyle(fontSize: 30, fontWeight: FontWeight.bold);
   static List<Widget> _widgetOptions = <Widget>[
-    VideoCallPage(),
+    // VideoCallPage(),
     Text(
       'Index 2: School',
       style: optionStyle,

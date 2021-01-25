@@ -33,6 +33,9 @@ class __LoginContentPageState extends State<_LoginContentPage>
     implements Presenter {
   LoginProvider provider;
 
+  String userName;
+  String roomID;
+
   @override
   void initState() {
     super.initState();
@@ -73,7 +76,8 @@ class __LoginContentPageState extends State<_LoginContentPage>
                       ),
                       onChanged: (value) {
                         if (value != null) {
-                          provider.username = value;
+                          // provider.username = value;
+                          userName = value;
                         }
                       },
                     )),
@@ -89,7 +93,7 @@ class __LoginContentPageState extends State<_LoginContentPage>
                     ),
                     onChanged: (value) {
                       if (value != null) {
-                        provider.password = value;
+                        roomID = value;
                       }
                     },
                   ),
@@ -107,7 +111,7 @@ class __LoginContentPageState extends State<_LoginContentPage>
                       '登录',
                     ),
                     onPressed: () {
-                      Application.router.navigateTo(context, Routers.main);
+                      Application.router.navigateTo(context,Routers.video);
 
                       // onClick('login');
                     },

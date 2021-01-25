@@ -10,7 +10,7 @@ typedef void OnOpenCallback();
 /// socket 抽象类
 abstract class BaseSocket {
 //  /打开回调函数
-  OnOpenCallback _onOpenCallback;
+  OnOpenCallback onOpenCallback;
 
   ///消息回调函数
   OnMessageCallback onMessageCallback;

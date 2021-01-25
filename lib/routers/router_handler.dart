@@ -22,10 +22,10 @@ var rootHandler =
 ///
 var videoHandler = Handler(
     handlerFunc: (BuildContext context, Map<String, List<String>> params) {
-  // String name = params['name']?.first;
-  // String password = params['password']?.first;
-  // print('$name  啊哈哈哈 $password');
-  return VideoCallPage();
+  String userName = params['userName']?.first;
+  String roomID = params['roomID']?.first;
+  print('$userName  啊哈哈哈 $roomID');
+  return VideoCallPage(userName,roomID);
 });
 
 ///

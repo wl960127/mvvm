@@ -15,4 +15,13 @@ abstract class BaseP2PClient {
 
   /// 结束呼叫
   endCall() {}
+
+  /// 切换摄像头
+  switchCamera() {}
+
+  /// 麦克风操作
+  muteMicroPhone(bool bool) {}
+
+  /// 喇叭操作
+  muteSpeaker(bool bool) {}
 }

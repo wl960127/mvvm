@@ -14,7 +14,8 @@ final viewModelModule = Module([
   factory<LoginProvider>(
       ({params}) => LoginProvider(params.get(0) as String, get())),
   factory<StartProvider>(({params}) => StartProvider()),
-  factory<VideoCallProvider>(({params}) => VideoCallProvider()),
+  factory<VideoCallProvider>(({params}) =>
+      VideoCallProvider(params.get(0) as String, params.get(0) as String)),
   factory<MainProvider>(({params}) => MainProvider()),
 ])
   ..withScope(mainScope, []);
