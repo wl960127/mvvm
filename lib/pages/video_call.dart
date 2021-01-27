@@ -32,7 +32,7 @@ class _VideoCallPage extends StatefulWidget {
 class _VideoCallPageState extends State<_VideoCallPage>
     with TickerProviderStateMixin<_VideoCallPage>, AutomaticKeepAliveClientMixin
     implements Presenter {
-  VideoCallProvider _provider;
+  // VideoCallProvider _provider;
 
   bool _isCalling = false;
   bool _inCalling = false;
@@ -56,12 +56,11 @@ class _VideoCallPageState extends State<_VideoCallPage>
   RTCVideoRenderer _remoteRender = RTCVideoRenderer();
 
   /// 信令  P2PVideoCall
-  P2PVideoClient _p2pVideoCall;
+  P2PVideoClient _p2pVideoClient;
 
   @override
   void initState() {
-    startForegroundService();
-    _provider = widget.mProvider;
+    // _provider = widget.mProvider;
     initRenderers();
     _connect();
     super.initState();
@@ -71,8 +70,8 @@ class _VideoCallPageState extends State<_VideoCallPage>
   deactivate() {
     super.deactivate();
     //关闭信令
-    if (_p2pVideoCall != null) {
-      _p2pVideoCall.close();
+    if (_p2pVideoClient != null) {
+      _p2pVideoClient.close();
     }
 
     if (_localRender != null) {
@@ -81,7 +80,6 @@ class _VideoCallPageState extends State<_VideoCallPage>
     if (_remoteRender != null) {
       _remoteRender.dispose();
     }
-    startForegroundService();
   }
 
   @override
@@ -108,7 +106,7 @@ class _VideoCallPageState extends State<_VideoCallPage>
                           //整个容器高
                           height: MediaQuery.of(context).size.height,
                           //远端视频渲染
-                          child: RTCVideoView(_remoteRender),
+                          child:  RTCVideoView(_remoteRender),
                           decoration: BoxDecoration(color: Colors.black54),
                         )),
                     //本地视频定位
@@ -174,22 +172,22 @@ class _VideoCallPageState extends State<_VideoCallPage>
 
   /// 挂断通话
   _hangUp() {
-    if (_p2pVideoCall != null) {
-      _p2pVideoCall.hangUp();
+    if (_p2pVideoClient != null) {
+      _p2pVideoClient.hangUp();
     }
   }
 
   //呼叫通话
 
   _startCall(String toUserID, bool isUseScreen) {
-    if (_p2pVideoCall != null && _userID != toUserID) {
-      _p2pVideoCall.startCall(toUserID, 'video', isUseScreen: isUseScreen);
+    if (_p2pVideoClient != null && _userID != toUserID) {
+      _p2pVideoClient.startCall(toUserID, 'video', isUseScreen: isUseScreen);
     }
   }
 
   // 切换摄像头
   _switchCamera() {
-    _p2pVideoCall.switchCamera();
+    _p2pVideoClient.switchCamera();
   }
 
   // 麦克风静音
@@ -198,7 +196,7 @@ class _VideoCallPageState extends State<_VideoCallPage>
     setState(() {
       _microphoneOff = muted;
     });
-    _p2pVideoCall.muteMicroPhone(!muted);
+    _p2pVideoClient.muteMicroPhone(!muted);
   }
 
   /// 喇叭静音
@@ -207,7 +205,7 @@ class _VideoCallPageState extends State<_VideoCallPage>
   //   setState(() {
   //     _speakerOff = muted;
   //   });
-  //   _p2pVideoCall.muteSpeaker(!muted);
+  //   _p2pVideoClient.muteSpeaker(!muted);
   // }
 
   /// 初始化视频渲染对象
@@ -219,11 +217,12 @@ class _VideoCallPageState extends State<_VideoCallPage>
   /// 连接服务器
   _connect() async {
     print(" 连接服务器 ");
-    if (_p2pVideoCall == null) {
+    if (_p2pVideoClient == null) {
       // 实例化信令并连接
-      _p2pVideoCall = P2PVideoClient('192.168.0.186', 8000)..connect();
+      _p2pVideoClient = P2PVideoClient('192.168.0.186', 8000)..connect();
       //信令状态处理
-      _p2pVideoCall.onSignalingStateCallback = (P2PState state) {
+      _p2pVideoClient.onSignalingStateCallback = (P2PState state) {
+        print(' 信令状态  $state');
         switch (state) {
           case P2PState.callStateJoinRoom:
             this.setState(() {
@@ -245,22 +244,25 @@ class _VideoCallPageState extends State<_VideoCallPage>
         }
       };
       // 人员列表更新
-      _p2pVideoCall.onUserUpdateCallback = ((event) {
+      _p2pVideoClient.onUserUpdateCallback = ((event) {
         setState(() {
           _users = event['users'] as List;
           print('人员列表更新 ${_users.toString()}');
         });
       });
       //本地流到达
-      _p2pVideoCall.onLocalStream = ((stream) {
+      _p2pVideoClient.onLocalStream = ((stream) {
+        print('本地视频流到达 video call ${stream == null}  ${_localRender == null}');
         _localRender.srcObject = stream;
       });
       //远端流到达
-      _p2pVideoCall.onAddRemoteStream = ((stream) {
+      _p2pVideoClient.onAddRemoteStream = ((stream) {
+        print('远程视频流到达 video call ${stream == null} ');
         _remoteRender.srcObject = stream;
       });
       //远端流移除
-      _p2pVideoCall.onRemoveRemoteStream = ((stream) {
+      _p2pVideoClient.onRemoveRemoteStream = ((stream) {
+        print('远程视频流移除 video call ${stream == null}  ${_remoteRender == null}');
         _remoteRender.srcObject = null;
       });
     } else {
@@ -298,29 +300,5 @@ class _VideoCallPageState extends State<_VideoCallPage>
 
   @override
   bool get wantKeepAlive => true;
-
-  ///
-startForegroundService() async {
-  await FlutterForegroundPlugin.setServiceMethodInterval(seconds: 5);
-  await FlutterForegroundPlugin.setServiceMethod(globalForegroundService);
-  await FlutterForegroundPlugin.startForegroundService(
-    holdWakeLock: false,
-    onStarted: () {
-      print("Foreground on Started");
-    },
-    onStopped: () {
-      print("Foreground on Stopped");
-    },
-    title: "Tcamera",
-    content: "Tcamera sharing your screen.",
-    iconName: "ic_stat_mobile_screen_share",
-  );
-  return true;
-}
-
-///
-void globalForegroundService() {
-  debugPrint("current datetime is ${DateTime.now()}");
-}
 
 }

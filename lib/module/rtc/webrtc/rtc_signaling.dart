@@ -1,30 +1,75 @@
 import 'dart:convert';
 
-import 'package:flutter/material.dart';
-import 'package:flutter_foreground_plugin/flutter_foreground_plugin.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
-import 'package:mvvm/module/rtc/basertc/p2p_state.dart';
+import 'package:mvvm/module/rtc/webrtc/signaling_state.dart';
 import 'package:mvvm/util/util.dart';
 
-import '../webrtc/p2p_constraints.dart';
-import 'p2p_ice_server.dart';
-import 'p2p_socket.dart';
+import 'call_state.dart';
+import 'rtc_ice_server.dart';
+import 'session.dart';
+import 'signaling_state.dart';
+import 'rtc_socket.dart';
 
-/// 定义信令状态回调
-typedef void SignalingStateCallback(P2PState state);
+/// 回调函数
+/// 信令状态回调
+typedef void SignalingStateCalllback(SignalingState state);
 
-/// 定义媒体流状回调
-typedef void StreamStateCallback(MediaStream stream);
+/// 呼叫状态回调
+typedef void CallStateCallback(Session session, CallSata state);
 
-/// 用户列表更新
-typedef void UserUpdateCallback(dynamic event);
+///  视频流回调
+typedef void StreamStateCallback(Session session, MediaStream stream);
+
+/// 其他事件回调
+typedef void OtherEventCallback(dynamic event);
+
+///  数据管道消息回调
+typedef void DataChannelMessageCallback(
+    Session session, RTCDataChannel dc, RTCDataChannelMessage data);
+
+/// 管道回调
+typedef void DataChannelCallback(Session session, RTCDataChannel dc);
 
 /// rtc逻辑操作
-class P2PVideoClient {
-  P2PSocket _p2pSocket;
+class RtcSignaling {
   String _host;
   int _p2pPort = 8000;
   int _turnPort = 9000;
+
+  //Json编码
+  JsonEncoder _encoder = JsonEncoder();
+
+  //Json解码
+  JsonDecoder _decoder = JsonDecoder();
+
+  /// IceServers 配置类
+  RtcIceServers _p2pIceServers;
+  //  socket 操作类
+  RtcSocket _rtcSocket;
+
+  ///
+  SignalingStateCallback onSignalingStateChange;
+
+  ///
+  CallStateCallback onCallStateChange;
+
+  ///
+  StreamStateCallback onLocalStream;
+
+  ///
+  StreamStateCallback onAddRemoteStream;
+
+  ///
+  StreamStateCallback onRemoveRemoteStream;
+
+  ///
+  OtherEventCallback onPeersUpdate;
+
+  ///
+  DataChannelMessageCallback onDataChannelMessage;
+
+  ///
+  DataChannelCallback onDataChannel;
 
   /// 自己的userID
   String _userId = randomNumeric(10);
@@ -35,56 +80,20 @@ class P2PVideoClient {
   /// 房间ID
   String _roomId = '1111';
 
-  //会话ID
-  var _sessionId;
-
-  P2PIceServers _p2pIceServers;
-
-  //Json编码
-  JsonEncoder _encoder = JsonEncoder();
-
-  //Json解码
-  JsonDecoder _decoder = JsonDecoder();
-
-  //PeerConnection集合
-  var _peerConnections = Map<dynamic, RTCPeerConnection>();
-
-  //远端Candidate数组
-  List<RTCIceCandidate> _remoteCandidates = [];
-
-  /// 本地媒体流
-  MediaStream _localStream;
-
-  ///信令状态回调函数
-  SignalingStateCallback onSignalingStateCallback;
-
-  ///媒体流状态回调函数,本地流
-  StreamStateCallback onLocalStream;
-
-  ///媒体流状态回调函数,远端流添加
-  StreamStateCallback onAddRemoteStream;
-
-  ///媒体流状态回调函数,远端流移除
-  StreamStateCallback onRemoveRemoteStream;
-
-  ///所有成员更新回调函数
-  UserUpdateCallback onUserUpdateCallback;
-
   ///
-  P2PVideoClient(this._host, this._p2pPort);
+  RtcSignaling(this._host, this._p2pPort);
 
   ///ws连接
   void connect() async {
     var url = "ws://$_host:$_p2pPort/ws";
-    _p2pSocket = P2PSocket(url);
+    _rtcSocket = RtcSocket(url);
 
     //对应于穿透需要配置的地方 默认没有
-    _p2pIceServers = P2PIceServers(_host, _turnPort);
+    _p2pIceServers = RtcIceServers(_host, _turnPort);
     _p2pIceServers.init();
 
-    _p2pSocket.onOpenCallback = () {
-      // this.onSignalingStateCallback(P2PState.connectionOpen);
-      print('p2p_video_call onOpen ');
+    _rtcSocket.onOpenCallback = () {
+      onSignalingStateChange?.call(SignalingState.SignalingState());
       _send('joinRoom', {
         'name': _userName, //名称
         'id': _userId, //自己Id
@@ -92,26 +101,26 @@ class P2PVideoClient {
       });
     };
 
-    _p2pSocket.onMessageCallback = (msg) {
+    _rtcSocket.onMessageCallback = (msg) {
       // print('p2p_video_call 接收到信息 $msg ');
       this._onMessage(_decoder.convert(msg as String));
     };
 
-    _p2pSocket.onCloseCallback = (dynamic code, dynamic reason) {
+    _rtcSocket.onCloseCallback = (dynamic code, dynamic reason) {
       print('p2p_video_call 关闭 $code  $reason ');
-      if (this.onSignalingStateCallback != null) {
-        this.onSignalingStateCallback(P2PState.connectionClosed);
-      }
     };
 
-    await _p2pSocket.connect();
+    // 将本地预览先传输
+    // onLocalStream?.
+
+    await _rtcSocket.connect();
   }
 
   /// 信令关闭
   close() {
     //关闭Socket
-    if (_p2pSocket != null) {
-      _p2pSocket.close();
+    if (_rtcSocket != null) {
+      _rtcSocket.close();
     }
   }
 
@@ -123,13 +132,13 @@ class P2PVideoClient {
     switch (mapData['msgType'] as String) {
       case 'updateUserList': //更新成员列表
         List<dynamic> user = data as List<dynamic>;
-        if (this.onUserUpdateCallback != null) {
-          //回调参数,包括自己Id及成员列表
-          Map<String, dynamic> event = Map<String, dynamic>();
-          event['users'] = user;
-          print('p2p_video_call 更新成员列表 ${data.toString()}');
-          this.onUserUpdateCallback(event);
-        }
+        // if (this.onUserUpdateCallback != null) {
+        //   //回调参数,包括自己Id及成员列表
+        //   Map<String, dynamic> event = Map<String, dynamic>();
+        //   event['users'] = user;
+        //   print('p2p_video_call 更新成员列表 ${data.toString()}');
+        //   this.onUserUpdateCallback(event);
+        // }
         break;
       case 'offer': //提议Offer消息
 
@@ -217,6 +226,10 @@ class P2PVideoClient {
   Future<RTCPeerConnection> _createPeerConnection(
       remoteID, media, bool isUseScreen) async {
     _localStream = await _createStream(media, isUseScreen); //创建并获取本地媒体流
+
+    if (this._localStream != null) {
+      this.onLocalStream(_localStream);
+    }
     RTCPeerConnection pc = await createPeerConnection(
         _p2pIceServers.iceServers, P2PConstraints.pcConstraints); // //创建PC
 
@@ -242,15 +255,21 @@ class P2PVideoClient {
       });
     };
     // Ice连接状态
-    pc.onIceConnectionState = (state) {};
+    pc.onIceConnectionState = (state) {
+      print(' Ice连接状态 $state  ');
+    };
     // 远端流到达
     pc.onAddStream = (stream) {
+      print('远端视频流到达 ${stream == null}  ${onAddRemoteStream == null}');
+
       if (this.onAddRemoteStream != null) {
         this.onAddRemoteStream(stream);
       }
     };
     // 远端流移除
     pc.onRemoveStream = (stream) {
+      print('远端视频流移除  ${stream == null ? ' 空 ' : ' 不为空'}');
+
       if (this.onRemoveRemoteStream != null) {
         this.onRemoveRemoteStream(stream);
       }
@@ -261,14 +280,11 @@ class P2PVideoClient {
 
   /// 创建媒体流
   Future<MediaStream> _createStream(media, bool isUseScreen) async {
-    MediaStream mediaStream = isUseScreen
+    return isUseScreen
         ? await navigator.getDisplayMedia(P2PConstraints.mediaConstraints)
         : await navigator.getUserMedia(P2PConstraints.mediaConstraints);
 
-    if (this._localStream != null) {
-      this.onLocalStream(mediaStream);
-    }
-    return mediaStream;
+    // return mediaStream;
   }
 
   /// 创建提议Offer
@@ -337,7 +353,7 @@ class P2PVideoClient {
     request["msgType"] = msgType;
     request["data"] = data;
     //Json转码后发送
-    _p2pSocket.send(_encoder.convert(request));
+    _rtcSocket.send(_encoder.convert(request));
   }
 
   /// 切换摄像头
@@ -387,4 +403,3 @@ class P2PVideoClient {
     }
   }
 }
-

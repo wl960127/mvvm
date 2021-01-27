@@ -2,8 +2,11 @@
 var _turnCredential;
 
 ///
-class P2PIceServers {
+class RtcIceServers {
+  ///
   String _url;
+
+  ///
   int _turnPort;
 
   /// ICE服务器信息
@@ -21,13 +24,14 @@ class P2PIceServers {
   };
 
   ///
-  P2PIceServers(this._url, this._turnPort);
+  RtcIceServers(this._url, this._turnPort);
 
   ///
   init() {
     // this._requestIceServer(this._url, this._turnPort);
   }
 
+  ///
   Future _requestIceServer(String url, int turnPort) async {
     if (_turnCredential == null) {
       try {

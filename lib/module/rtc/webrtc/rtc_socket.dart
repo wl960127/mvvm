@@ -10,7 +10,7 @@ typedef void OnCloseCallback(dynamic code, dynamic reason);
 typedef void OnOpenCallback();
 
 /// socket 连接
-class P2PSocket {
+class RtcSocket {
   /// 连接 url
   String _url;
 
@@ -27,7 +27,7 @@ class P2PSocket {
   OnCloseCallback onCloseCallback;
 
   ///构造函数
-  P2PSocket(this._url);
+  RtcSocket(this._url);
 
   /// 连接ws
   connect() async {
