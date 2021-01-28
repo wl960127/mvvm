@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/src/widgets/framework.dart';
-import 'package:flutter_foreground_plugin/flutter_foreground_plugin.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
-import 'package:mvvm/module/rtc/basertc/p2p_state.dart';
-import 'package:mvvm/module/rtc/webrtc/p2p_video_client.dart';
+import 'package:mvvm/module/rtc/webrtc/call_state.dart';
+import 'package:mvvm/module/rtc/webrtc/rtc_signaling.dart';
+import 'package:mvvm/module/rtc/webrtc/session.dart';
+import 'package:mvvm/module/rtc/webrtc/signaling_state.dart';
 import 'package:mvvm/pages/common/base.dart';
 import 'package:mvvm/util/util.dart';
 import 'package:mvvm/viewmodel/video_provider.dart';
@@ -38,12 +39,15 @@ class _VideoCallPageState extends State<_VideoCallPage>
   bool _inCalling = false;
   String _sdp;
 
+  Session _session;
+
   bool _microphoneOff = false;
   bool _speakerOff = false;
 
   // String _userName = "1";
   // String _roomId = "111";
   String _userID = randomNumeric(6);
+
   // String _userID = randomNumeric(6);
 
   //所有成员
@@ -55,8 +59,8 @@ class _VideoCallPageState extends State<_VideoCallPage>
   /// 远端视频渲染对象
   RTCVideoRenderer _remoteRender = RTCVideoRenderer();
 
-  /// 信令  P2PVideoCall
-  P2PVideoClient _p2pVideoClient;
+  /// 信令
+  RtcSignaling _rtcSignaling;
 
   @override
   void initState() {
@@ -70,16 +74,9 @@ class _VideoCallPageState extends State<_VideoCallPage>
   deactivate() {
     super.deactivate();
     //关闭信令
-    if (_p2pVideoClient != null) {
-      _p2pVideoClient.close();
-    }
-
-    if (_localRender != null) {
-      _localRender.dispose();
-    }
-    if (_remoteRender != null) {
-      _remoteRender.dispose();
-    }
+    _rtcSignaling?.close();
+    _localRender?.dispose();
+    _remoteRender?.dispose();
   }
 
   @override
@@ -106,7 +103,7 @@ class _VideoCallPageState extends State<_VideoCallPage>
                           //整个容器高
                           height: MediaQuery.of(context).size.height,
                           //远端视频渲染
-                          child:  RTCVideoView(_remoteRender),
+                          child: RTCVideoView(_remoteRender),
                           decoration: BoxDecoration(color: Colors.black54),
                         )),
                     //本地视频定位
@@ -172,22 +169,23 @@ class _VideoCallPageState extends State<_VideoCallPage>
 
   /// 挂断通话
   _hangUp() {
-    if (_p2pVideoClient != null) {
-      _p2pVideoClient.hangUp();
+    if (_rtcSignaling != null) {
+      _rtcSignaling.hangUp();
     }
   }
 
   //呼叫通话
 
-  _startCall(String toUserID, bool isUseScreen) {
-    if (_p2pVideoClient != null && _userID != toUserID) {
-      _p2pVideoClient.startCall(toUserID, 'video', isUseScreen: isUseScreen);
+  _startCall(String toUserID, bool isUseScreen) async {
+    if (_rtcSignaling != null && _userID != toUserID) {
+      await _rtcSignaling.startCall(toUserID, 'video',
+          isUseScreen: isUseScreen);
     }
   }
 
   // 切换摄像头
   _switchCamera() {
-    _p2pVideoClient.switchCamera();
+    _rtcSignaling.switchCamera();
   }
 
   // 麦克风静音
@@ -196,7 +194,7 @@ class _VideoCallPageState extends State<_VideoCallPage>
     setState(() {
       _microphoneOff = muted;
     });
-    _p2pVideoClient.muteMicroPhone(!muted);
+    _rtcSignaling.muteMicroPhone(!muted);
   }
 
   /// 喇叭静音
@@ -217,53 +215,71 @@ class _VideoCallPageState extends State<_VideoCallPage>
   /// 连接服务器
   _connect() async {
     print(" 连接服务器 ");
-    if (_p2pVideoClient == null) {
+    if (_rtcSignaling == null) {
       // 实例化信令并连接
-      _p2pVideoClient = P2PVideoClient('192.168.0.186', 8000)..connect();
+      _rtcSignaling = RtcSignaling('192.168.0.186', 8000)..connect();
       //信令状态处理
-      _p2pVideoClient.onSignalingStateCallback = (P2PState state) {
+      _rtcSignaling.onSignalingStateChange = (SignalingState state) {
         print(' 信令状态  $state');
         switch (state) {
-          case P2PState.callStateJoinRoom:
-            this.setState(() {
-              _inCalling = true;
-            });
+          case SignalingState.connectionOpen:
             break;
-          //挂断状态
-          case P2PState.callStateHangUp:
-            this.setState(() {
-              _localRender.srcObject = null;
-              _remoteRender.srcObject = null;
-              _inCalling = false;
-            });
+          case SignalingState.connectionClose:
             break;
-          case P2PState.connectionClosed:
-          case P2PState.connectionError:
-          case P2PState.connectionOpen:
+          case SignalingState.connectionError:
+            break;
+          //   case P2PState.callStateJoinRoom:
+          //     this.setState(() {
+          //       _inCalling = true;
+          //     });
+          //     break;
+          //   //挂断状态
+          //   case P2PState.callStateHangUp:
+          //     this.setState(() {
+          //       _localRender.srcObject = null;
+          //       _remoteRender.srcObject = null;
+          //       _inCalling = false;
+          //     });
+          //     break;
+          //   case P2PState.connectionClosed:
+          //   case P2PState.connectionError:
+          //   case P2PState.connectionOpen:
+        }
+      };
+
+      _rtcSignaling.onCallStateChange = (Session session, CallSata state) {
+        switch (state) {
+          case CallSata.callStateNew:
+            // setState(() {
+
+            // });
+            _session = session;
+            _inCalling = true;
+            break;
+          case CallSata.callStateBye:
+            // setState(() {
+            // });
+            _localRender.srcObject = null;
+            _remoteRender.srcObject = null;
+            _inCalling = false;
+            _session = null;
+            break;
+          case CallSata.callStateInvite:
+            break;
+          case CallSata.callStateConnected:
+            break;
+          case CallSata.callStateRinging:
             break;
         }
       };
-      // 人员列表更新
-      _p2pVideoClient.onUserUpdateCallback = ((event) {
-        setState(() {
-          _users = event['users'] as List;
-          print('人员列表更新 ${_users.toString()}');
-        });
-      });
-      //本地流到达
-      _p2pVideoClient.onLocalStream = ((stream) {
-        print('本地视频流到达 video call ${stream == null}  ${_localRender == null}');
+
+      _rtcSignaling.onPeersUpdate((event) {});
+
+      _rtcSignaling.onLocalStream = ((_, stream) {
         _localRender.srcObject = stream;
       });
-      //远端流到达
-      _p2pVideoClient.onAddRemoteStream = ((stream) {
-        print('远程视频流到达 video call ${stream == null} ');
+      _rtcSignaling.onAddRemoteStream = ((_, stream) {
         _remoteRender.srcObject = stream;
-      });
-      //远端流移除
-      _p2pVideoClient.onRemoveRemoteStream = ((stream) {
-        print('远程视频流移除 video call ${stream == null}  ${_remoteRender == null}');
-        _remoteRender.srcObject = null;
       });
     } else {
       print("_p2pVideoClient!= null");
@@ -300,5 +316,4 @@ class _VideoCallPageState extends State<_VideoCallPage>
 
   @override
   bool get wantKeepAlive => true;
-
 }

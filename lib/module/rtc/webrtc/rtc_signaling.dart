@@ -1,18 +1,19 @@
 import 'dart:convert';
 
 import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:mvvm/module/rtc/webrtc/session_type.dart';
 import 'package:mvvm/module/rtc/webrtc/signaling_state.dart';
 import 'package:mvvm/util/util.dart';
 
 import 'call_state.dart';
 import 'rtc_ice_server.dart';
+import 'rtc_socket.dart';
 import 'session.dart';
 import 'signaling_state.dart';
-import 'rtc_socket.dart';
 
 /// 回调函数
 /// 信令状态回调
-typedef void SignalingStateCalllback(SignalingState state);
+typedef void SignalingStateCallback(SignalingState state);
 
 /// 呼叫状态回调
 typedef void CallStateCallback(Session session, CallSata state);
@@ -77,6 +78,8 @@ class RtcSignaling {
   /// 用户名字
   String _userName = 'rtc_name_${randomNumeric(8)} ';
 
+  String _selfId = randomNumeric(6);
+
   /// 房间ID
   String _roomId = '1111';
 
@@ -93,12 +96,12 @@ class RtcSignaling {
     _p2pIceServers.init();
 
     _rtcSocket.onOpenCallback = () {
-      onSignalingStateChange?.call(SignalingState.SignalingState());
-      _send('joinRoom', {
-        'name': _userName, //名称
-        'id': _userId, //自己Id
-        'roomId': _roomId, //房
-      });
+      onSignalingStateChange?.call(SignalingState.ConnectionOpen);
+      // _send('joinRoom', {
+      //   'name': _userName, //名称
+      //   'id': _userId, //自己Id
+      //   'roomId': _roomId, //房
+      // });
     };
 
     _rtcSocket.onMessageCallback = (msg) {
@@ -108,10 +111,8 @@ class RtcSignaling {
 
     _rtcSocket.onCloseCallback = (dynamic code, dynamic reason) {
       print('p2p_video_call 关闭 $code  $reason ');
+      onSignalingStateChange?.call(SignalingState.connectionClose);
     };
-
-    // 将本地预览先传输
-    // onLocalStream?.
 
     await _rtcSocket.connect();
   }
@@ -366,40 +367,24 @@ class RtcSignaling {
   muteSpeaker(bool bool) {}
 
   /// 开始呼叫
-  startCall(String remoteUserId, String mediaType, {bool isUseScreen = false}) {
-    this._sessionId = this._userId + '-' + mediaType;
+  startCall(String remoteUserId, String mediaType,
+      {bool isUseScreen = false}) async {
+    var sessionID = _selfId + '-' + remoteUserId;
+    //创建会话
+    Session session = await _createSession();
     //信令状态
-    if (this.onSignalingStateCallback != null) {
-      this.onSignalingStateCallback(P2PState.callStateJoinRoom);
-    }
-    //创建PeerConnect
-    _createPeerConnection(remoteUserId, mediaType, isUseScreen).then((pc) {
-      // pc对象放入集合
-      _peerConnections[remoteUserId] = pc;
-      // 发送offer请求
-      _createOffer(remoteUserId, pc, mediaType);
-    });
   }
 
   ///挂断/离开
-  void leave(id) {
-    //关闭并清空所有PC
-    _peerConnections.forEach((key, peerConn) {
-      peerConn.close();
-    });
-    _peerConnections.clear();
+  void leave(id) {}
 
-    //销毁本地媒体流
-    if (_localStream != null) {
-      _localStream.dispose();
-      _localStream = null;
-    }
-
-    //将会话Id置为空
-    this._sessionId = null;
-    //设置当前状态为挂断状态
-    if (this.onSignalingStateCallback != null) {
-      this.onSignalingStateCallback(P2PState.callStateHangUp);
-    }
+  _createSession(
+      {Session session,
+      String peerID,
+      String sessionID,
+      SessionType sessionType,
+      bool screenSharing}) async {
+    var newSession = session ?? Session(sid: sessionID, pid: peerID);
+    if (sessionType != SessionType.data) {}
   }
 }

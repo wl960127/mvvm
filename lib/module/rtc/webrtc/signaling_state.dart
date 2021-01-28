@@ -1,7 +1,7 @@
 ///
 enum SignalingState {
   /// 打开
-  ConnectionOpen,
+  connectionOpen,
 
   /// 关闭
   connectionClose,
