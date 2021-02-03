@@ -78,13 +78,10 @@ class RtcSignaling {
   List<MediaStream> _remoteStreams = <MediaStream>[];
   Map<String, Session> _sessions = {};
 
-  /// 自己的userID
-  String _userId = randomNumeric(10);
-
   String _selfId = randomNumeric(6);
 
   /// 房间ID
-  String _roomId = '1111';
+  // String _roomId = '1111';
 
   MediaStream _localStream;
 
@@ -197,7 +194,7 @@ class RtcSignaling {
             }
           } else {
             _sessions[sessionId] =
-                Session(pid: peerId as String, sid: sessionId as String)
+                Session(pid: peerId as String, sid: sessionId)
                   ..remoteCandidates.add(candidate);
           }
         }
@@ -227,8 +224,10 @@ class RtcSignaling {
   /// 创建媒体流
   Future<MediaStream> _createStream(media, bool isUseScreen) async {
     return isUseScreen
-        ? await navigator.getDisplayMedia(P2PConstraints.mediaConstraints)
-        : await navigator.getUserMedia(P2PConstraints.mediaConstraints);
+        ? await navigator.mediaDevices
+            .getDisplayMedia(P2PConstraints.mediaConstraints)
+        : await navigator.mediaDevices
+            .getUserMedia(P2PConstraints.mediaConstraints);
   }
 
   /// 创建提议Offer
@@ -291,7 +290,8 @@ class RtcSignaling {
   /// 切换摄像头
   switchCamera() {
     if (_localStream != null) {
-      _localStream.getVideoTracks()[0].switchCamera();
+      // _localStream.getVideoTracks()[0].switchCamera();
+      Helper.switchCamera(_localStream.getVideoTracks()[0]);
     }
   }
 
@@ -410,7 +410,7 @@ class RtcSignaling {
 
   Future<void> _closeSession(Session session) async {
     _localStream?.getTracks()?.forEach((element) async {
-      await element.dispose();
+      await element.stop();
     });
     await _localStream?.dispose();
     _localStream = null;

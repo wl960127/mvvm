@@ -2,8 +2,7 @@ import 'package:fluro/fluro.dart';
 import 'package:flutter/material.dart';
 import 'package:mvvm/pages/login_page.dart';
 import 'package:mvvm/pages/main_page.dart';
-
-import 'file:///G:/study/flutterDemo/mvvm/lib/pages/video_call.dart';
+import 'package:mvvm/pages/video_call.dart';
 
 ///
 var rootHandler =
@@ -25,7 +24,7 @@ var videoHandler = Handler(
   String userName = params['userName']?.first;
   String roomID = params['roomID']?.first;
   print('$userName  啊哈哈哈 $roomID');
-  return VideoCallPage(userName,roomID);
+  return VideoCallPage(userName, roomID);
 });
 
 ///
