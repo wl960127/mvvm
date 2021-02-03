@@ -1,5 +1,5 @@
 /// 呼叫状态
-enum CallSata {
+enum CallState {
   /// 开始呼叫
   callStateNew,
 

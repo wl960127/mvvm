@@ -37,7 +37,7 @@ dependencies:
   dartdoc: ^0.38.0
   fluro: ^1.7.8
   #  ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION 确保高版本Android屏幕分享不会崩
-  flutter_foreground_plugin: ^0.4.0 
+  # flutter_foreground_plugin: ^0.4.0 
  
 
 

@@ -4,6 +4,7 @@ import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:mvvm/module/rtc/webrtc/call_state.dart';
 import 'package:mvvm/module/rtc/webrtc/rtc_signaling.dart';
 import 'package:mvvm/module/rtc/webrtc/session.dart';
+import 'package:mvvm/module/rtc/webrtc/session_type.dart';
 import 'package:mvvm/module/rtc/webrtc/signaling_state.dart';
 import 'package:mvvm/pages/common/base.dart';
 import 'package:mvvm/util/util.dart';
@@ -52,6 +53,7 @@ class _VideoCallPageState extends State<_VideoCallPage>
 
   //所有成员
   List<dynamic> _users = [];
+  var _selfID;
 
   /// 本地视频渲染对象
   RTCVideoRenderer _localRender = RTCVideoRenderer();
@@ -129,7 +131,7 @@ class _VideoCallPageState extends State<_VideoCallPage>
             : ListView.builder(
                 shrinkWrap: true,
                 padding: EdgeInsets.all(1),
-                itemCount: _users.length,
+                itemCount: _users != null ? _users.length : 0,
                 itemBuilder: (context, i) {
                   return _buildItem(context, _users[i]);
                 }),
@@ -170,16 +172,15 @@ class _VideoCallPageState extends State<_VideoCallPage>
   /// 挂断通话
   _hangUp() {
     if (_rtcSignaling != null) {
-      _rtcSignaling.hangUp();
+      _rtcSignaling.bye(_session.sid);
     }
   }
 
   //呼叫通话
 
-  _startCall(String toUserID, bool isUseScreen) async {
+  _startCall(String toUserID, String type, bool isUseScreen) async {
     if (_rtcSignaling != null && _userID != toUserID) {
-      await _rtcSignaling.startCall(toUserID, 'video',
-          isUseScreen: isUseScreen);
+      await _rtcSignaling.invite(toUserID, type, isUseScreen);
     }
   }
 
@@ -194,7 +195,7 @@ class _VideoCallPageState extends State<_VideoCallPage>
     setState(() {
       _microphoneOff = muted;
     });
-    _rtcSignaling.muteMicroPhone(!muted);
+    _rtcSignaling.muteMicroPhone();
   }
 
   /// 喇叭静音
@@ -228,52 +229,43 @@ class _VideoCallPageState extends State<_VideoCallPage>
             break;
           case SignalingState.connectionError:
             break;
-          //   case P2PState.callStateJoinRoom:
-          //     this.setState(() {
-          //       _inCalling = true;
-          //     });
-          //     break;
-          //   //挂断状态
-          //   case P2PState.callStateHangUp:
-          //     this.setState(() {
-          //       _localRender.srcObject = null;
-          //       _remoteRender.srcObject = null;
-          //       _inCalling = false;
-          //     });
-          //     break;
-          //   case P2PState.connectionClosed:
-          //   case P2PState.connectionError:
-          //   case P2PState.connectionOpen:
         }
       };
 
-      _rtcSignaling.onCallStateChange = (Session session, CallSata state) {
+      _rtcSignaling.onCallStateChange = (Session session, CallState state) {
         switch (state) {
-          case CallSata.callStateNew:
-            // setState(() {
+          case CallState.callStateNew:
+            setState(() {
+              _session = session;
+              _inCalling = true;
+            });
+            break;
+          case CallState.callStateBye:
+            setState(() {
+              _localRender.srcObject = null;
+              _remoteRender.srcObject = null;
+              _inCalling = false;
+              _session = null;
+            });
 
-            // });
-            _session = session;
-            _inCalling = true;
             break;
-          case CallSata.callStateBye:
-            // setState(() {
-            // });
-            _localRender.srcObject = null;
-            _remoteRender.srcObject = null;
-            _inCalling = false;
-            _session = null;
+          case CallState.callStateInvite:
             break;
-          case CallSata.callStateInvite:
+          case CallState.callStateConnected:
             break;
-          case CallSata.callStateConnected:
-            break;
-          case CallSata.callStateRinging:
+          case CallState.callStateRinging:
             break;
         }
       };
 
-      _rtcSignaling.onPeersUpdate((event) {});
+      _rtcSignaling.onPeersUpdate = ((event) {
+        if (event != null) {
+          setState(() {
+            _selfID = event['self'];
+            _users = event['peers'] as List;
+          });
+        }
+      });
 
       _rtcSignaling.onLocalStream = ((_, stream) {
         _localRender.srcObject = stream;
@@ -288,9 +280,11 @@ class _VideoCallPageState extends State<_VideoCallPage>
 
   ///
   Widget _buildItem(BuildContext context, user) {
+    var self = (user['id'] == _selfID);
+    String userName = user['name'] as String;
     return ListBody(children: <Widget>[
       ListTile(
-        title: Text(user['name'] as String),
+        title: Text(self ? userName + '[Your self]' : userName),
         subtitle: Text('id ${user['id'] as String}'),
         onTap: null,
         trailing: SizedBox(
@@ -300,12 +294,14 @@ class _VideoCallPageState extends State<_VideoCallPage>
                 children: <Widget>[
                   IconButton(
                     icon: Icon(Icons.videocam),
-                    onPressed: () => _startCall(user['id'] as String, false),
+                    onPressed: () =>
+                        _startCall(user['id'] as String, VideoSession, false),
                     tooltip: '视频通话',
                   ),
                   IconButton(
                     icon: Icon(Icons.screen_share),
-                    onPressed: () => _startCall(user['id'] as String, true),
+                    onPressed: () =>
+                        _startCall(user['id'] as String, VideoSession, true),
                     tooltip: '屏幕共享',
                   )
                 ])),

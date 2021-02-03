@@ -1,10 +1,7 @@
-import 'dart:html';
-
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 
 ///
-class Session
- {
+class Session {
   ///
   String pid;
 
@@ -12,8 +9,8 @@ class Session
   String sid;
 
   ///构造
-  Session
-  ({this.pid, this.sid});
+  Session({this.pid, this.sid});
+
   // 管道流
   RTCPeerConnection _pc;
 
@@ -37,5 +34,10 @@ class Session
   }
 
   /// 远程会话集合
-  List<RtcIceCandidate> remoteIceCandidate = [];
+  List<RTCIceCandidate> _remoteIceCandidate = [];
+  // set remoteCandidates(RTCDataChannel dc) {
+  //   _dc = dc;
+  // }
+  ///
+  List<RTCIceCandidate> get remoteCandidates => _remoteIceCandidate;
 }
