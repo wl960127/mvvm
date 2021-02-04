@@ -37,4 +37,16 @@ class P2PConstraints {
     },
     'optional': [],
   };
+
+    /// 非音视频通讯 SDP约束
+  static const Map<String, dynamic> dataSdpConstraints = {
+    'mandatory': {
+      //是否接收语音数据
+      'OfferToReceiveAudio': false,
+      //是否接收视频数据
+      'OfferToReceiveVideo': false,
+    },
+    'optional': [],
+  };
+
 }

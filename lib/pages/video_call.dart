@@ -271,6 +271,11 @@ class _VideoCallPageState extends State<_VideoCallPage>
         _localRender.srcObject = stream;
       });
       _rtcSignaling.onAddRemoteStream = ((_, stream) {
+        if (stream == null) {
+          print("本地数据 为空");
+        } else {
+          print("远端数据 不为空");
+        }
         _remoteRender.srcObject = stream;
       });
     } else {

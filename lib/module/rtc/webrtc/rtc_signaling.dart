@@ -99,7 +99,11 @@ class RtcSignaling {
 
     _rtcSocket.onOpenCallback = () {
       onSignalingStateChange?.call(SignalingState.connectionOpen);
-      _send('new', {'name': DeviceInfo.label, 'id': _selfId});
+      _send('new', {
+        'name': DeviceInfo.label,
+        'id': _selfId,
+        'user_agent': DeviceInfo.userAgent
+      });
     };
 
     _rtcSocket.onMessageCallback = (msg) {
@@ -223,19 +227,24 @@ class RtcSignaling {
 
   /// 创建媒体流
   Future<MediaStream> _createStream(media, bool isUseScreen) async {
-    return isUseScreen
+    MediaStream stream = isUseScreen
         ? await navigator.mediaDevices
             .getDisplayMedia(P2PConstraints.mediaConstraints)
         : await navigator.mediaDevices
             .getUserMedia(P2PConstraints.mediaConstraints);
+
+    onLocalStream?.call(null, stream);
+    return stream;
   }
 
   /// 创建提议Offer
   Future<void> _createOffer(Session session, String media) async {
     try {
       //返回SDP信息
-      RTCSessionDescription s =
-          await session.pc.createOffer(P2PConstraints.sdpConstraints);
+      RTCSessionDescription s = await session.pc.createOffer(
+          media == VideoSession
+              ? P2PConstraints.sdpConstraints
+              : P2PConstraints.dataSdpConstraints);
       //设置本地描述信息
       await session.pc.setLocalDescription(s);
       //发送Offer至对方
@@ -326,7 +335,7 @@ class RtcSignaling {
   }
 
   ///挂断/离开
-  void leave(id) {}
+  // void leave(id) {}
 
   Future<Session> _createSession(
       {Session session,
@@ -350,9 +359,19 @@ class RtcSignaling {
 
     pc.onIceCandidate = (candidate) {
       if (candidate == null) {
+        print('onIceCandidate: complete!');
         return;
       }
-      _send('candidate', {});
+      _send('candidate', {
+        'to': peerID,
+        'from': _selfId,
+        'candidate': {
+          'sdpMLineIndex': candidate.sdpMlineIndex,
+          'sdpMid': candidate.sdpMid,
+          'candidate': candidate.candidate,
+        },
+        'session_id': sessionID,
+      });
     };
 
     pc.onIceConnectionState = (state) {};
@@ -363,6 +382,7 @@ class RtcSignaling {
       }
     };
 
+  // pc.onAddStream
     pc.onRemoveStream = (stream) {
       onRemoveRemoteStream?.call(newSession, stream);
       _remoteStreams.removeWhere((it) {

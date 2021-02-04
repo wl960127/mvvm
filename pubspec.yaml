@@ -33,7 +33,7 @@ dependencies:
   rxdart: ^0.21.0
   dio: 3.0.8 #latest version
   flutter_webview_plugin: ^0.3.11
-  flutter_webrtc: ^0.5.7
+  flutter_webrtc: ^0.5.8
   dartdoc: ^0.38.0
   fluro: ^1.7.8
   #  ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION 确保高版本Android屏幕分享不会崩
